@@ -51,13 +51,20 @@ hook.Add("EntityTakeDamage", "A_Sakura_DamageIndicator_Track", function(victim, 
     if not playerArmorSnapshot[victim] then
         InitPlayerData(victim)
     end
-    local attackerPos = attacker:GetPos()
-    if attacker:IsPlayer() then
+    -- 优先使用 inflictor（爆炸物本身）的位置，适用于手雷、火箭弹等范围伤害
+    -- 当 inflictor 与 attacker 不同时，说明存在独立的爆炸物实体，其位置更接近实际爆炸点
+    local inflictor = dmginfo:GetInflictor()
+    local attackerPos
+    if IsValid(inflictor) and inflictor ~= attacker then
+        attackerPos = inflictor:GetPos()
+    elseif attacker:IsPlayer() then
         attackerPos = attacker:EyePos()
     elseif attacker:IsNPC() then
         attackerPos = attacker:EyePos()
     elseif attacker:IsVehicle() and IsValid(attacker:GetDriver()) then
         attackerPos = attacker:GetDriver():EyePos()
+    else
+        attackerPos = attacker:GetPos()
     end
 
     local armorBefore = victim:Armor()

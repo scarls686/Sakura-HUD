@@ -106,7 +106,7 @@ end
 
 local function L(key)
     local lang = GetCurrentLang()
-    return (LANGUAGE[lang] and LANGUAGE[lang][key]) or (LANGUAGE.en[key]) or key
+    return (LANGUAGE[lang] and LANGUAGE[lang][key]) or (LANGUAGE.zh[key]) or key
 end
 
 local HUD_ELEMENTS = {

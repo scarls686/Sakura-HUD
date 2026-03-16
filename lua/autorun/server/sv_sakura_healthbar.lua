@@ -46,18 +46,22 @@ hook.Add("Think", "SakuraHealthBarUpdate", function()
             if target:Health() > 0 then
                 target:SetNWBool("Sakura_Health_Valid", true)
                 target:SetNWInt("Sakura_Health_HP", target:Health())
-                if not target.Sakura_MaxHealth or target:Health() > target.Sakura_MaxHealth then
-                    if target:Health() > target:GetMaxHealth() then
-                        target.Sakura_MaxHealth = target:Health()
-                    else
-                        target.Sakura_MaxHealth = target:GetMaxHealth()
+                local curMaxHP = target:GetMaxHealth()
+                -- GetMaxHealth() 为 0 说明引擎尚未完成 NPC 初始化，跳过本帧避免将当前 HP 误存为最大值
+                if curMaxHP > 0 then
+                    if not target.Sakura_MaxHealth or target:Health() > target.Sakura_MaxHealth then
+                        if target:Health() > curMaxHP then
+                            target.Sakura_MaxHealth = target:Health()
+                        else
+                            target.Sakura_MaxHealth = curMaxHP
+                        end
                     end
-                end
 
-                target.Sakura_PreviousMaxHP = target.Sakura_PreviousMaxHP or target:GetMaxHealth()
-                if target.Sakura_PreviousMaxHP ~= target:GetMaxHealth() then
-                    target.Sakura_MaxHealth = target:GetMaxHealth()
-                    target.Sakura_PreviousMaxHP = target:GetMaxHealth()
+                    target.Sakura_PreviousMaxHP = target.Sakura_PreviousMaxHP or curMaxHP
+                    if target.Sakura_PreviousMaxHP ~= curMaxHP then
+                        target.Sakura_MaxHealth = curMaxHP
+                        target.Sakura_PreviousMaxHP = curMaxHP
+                    end
                 end
 
                 target:SetNWInt("Sakura_Health_MaxHP", target.Sakura_MaxHealth)
@@ -74,10 +78,17 @@ hook.Add("Think", "SakuraHealthBarUpdate", function()
                 end
 
                 -- Disposition: D_HT=1(仇恨) D_FR=2(恐惧) D_LI=3(喜爱) D_NU=4(中立)
+                -- 注意：Disposition() 返回的是关系类别，与战斗状态独立。
+                -- GMod 沙盒中许多 NPC 对玩家的关系类别默认为 D_NU=4，
+                -- 即使它们正在主动攻击；因此额外检查 GetEnemy() 以修正误判。
                 if target:IsNPC() then
                     for _, ply in pairs(player.GetAll()) do
                         if IsValid(ply) then
-                            target:SetNWInt("Sakura_Health_Relation_" .. ply:UniqueID(), target:Disposition(ply))
+                            local disp = target:Disposition(ply)
+                            if IsValid(target:GetEnemy()) and target:GetEnemy() == ply then
+                                disp = 1 -- 强制 D_HT：当前正以该玩家为目标
+                            end
+                            target:SetNWInt("Sakura_Health_Relation_" .. ply:UniqueID(), disp)
                         end
                     end
                 end
