@@ -126,6 +126,30 @@ end
 -- ===== 目标收集 =====
 local TargetClasses = {"npc_*", "monster_*"}
 
+-- IsLineOfSightClear 从实体（GetShootPos）向玩家发射，掩体后的 NPC 即使躯干暴露也可能返回 false，
+-- 导致血条淡出卡住。改为从玩家眼睛向实体 OBB 中心/顶部发射，正确判断玩家是否能看到实体。
+local _losFilter = {}
+local function IsEntityVisible(ent, playerPos)
+    _losFilter[1] = LocalPlayer()
+    _losFilter[2] = ent
+    local entOrigin = ent:GetPos()
+    local tr = util.TraceLine({
+        start  = playerPos,
+        endpos = entOrigin + ent:OBBCenter(),
+        filter = _losFilter,
+        mask   = MASK_SOLID,
+    })
+    if not tr.Hit then return true end
+    -- 备用：检测实体上部（80% 高度处）
+    tr = util.TraceLine({
+        start  = playerPos,
+        endpos = entOrigin + Vector(0, 0, ent:OBBMaxs().z * 0.8),
+        filter = _losFilter,
+        mask   = MASK_SOLID,
+    })
+    return not tr.Hit
+end
+
 local function CollectTargets(mode, maxRange)
     local ply = LocalPlayer()
     if not IsValid(ply) then return {} end
@@ -138,7 +162,7 @@ local function CollectTargets(mode, maxRange)
             for _, ent in pairs(ents.FindByClass(class)) do
                 if IsValid(ent) and ent:GetNWBool("Sakura_Health_Valid", false) then
                     local dist = playerPos:Distance(ent:GetPos())
-                    if dist < maxRange and ent:IsLineOfSightClear(playerPos) then
+                    if dist < maxRange and IsEntityVisible(ent, playerPos) then
                         table.insert(targets, ent)
                     end
                 end
@@ -147,7 +171,7 @@ local function CollectTargets(mode, maxRange)
         for _, ent in ipairs(player.GetAll()) do
             if ent ~= ply and IsValid(ent) and ent:GetNWBool("Sakura_Health_Valid", false) then
                 local dist = playerPos:Distance(ent:GetPos())
-                if dist < maxRange and ent:IsLineOfSightClear(playerPos) then
+                if dist < maxRange and IsEntityVisible(ent, playerPos) then
                     table.insert(targets, ent)
                 end
             end

@@ -6,7 +6,8 @@ util.AddNetworkString("Sakura_Kill")
 local headshot_cache = {}
 local armor_cache = {}
 local npc_hit_frame = {}
-local last_hit_frame = {} -- 单帧限流：[攻击者Index_受害者Index] = 上次触发帧数
+local last_hit_frame = {} -- 单帧限流：[atkIdx_vicIdx] = 上次触发帧数
+local npc_kill_sent = {}  -- [atkIdx_vicIdx] = true，OnNPCKilled 已发击杀时标记
 
 local function CheckHitFrame(attacker, ent)
     local frameKey = attacker:EntIndex() .. "_" .. ent:EntIndex()
@@ -111,18 +112,30 @@ hook.Add("PostEntityTakeDamage", "Sakura_NPCHitProcess", function(ent, dmginfo, 
     local attacker = dmginfo:GetAttacker()
     if not IsValid(attacker) or not attacker:IsPlayer() or attacker == ent then return end
     if not (ent:IsNPC() or ent:IsNextBot()) then return end
-    if ent:Health() <= 0 then return end
     if not CheckHitFrame(attacker, ent) then return end
 
-    net.Start("Sakura_Hit")
-    net.WriteBool(headshot_cache[idx] or false)
-    net.WriteBool(armor_cache[idx] or false)
-    net.Send(attacker)
+    -- 推迟到下一帧发送：此时 OnNPCKilled 已执行完毕，可通过 npc_kill_sent 判断是否为击杀
+    local killKey = attacker:EntIndex() .. "_" .. idx
+    local hs = headshot_cache[idx] or false
+    local ar = armor_cache[idx] or false
+    timer.Simple(0, function()
+        if not IsValid(attacker) then return end
+        if npc_kill_sent[killKey] then
+            npc_kill_sent[killKey] = nil
+            return  -- OnNPCKilled 已发 Sakura_Kill，不重复发命中
+        end
+        net.Start("Sakura_Hit")
+        net.WriteBool(hs)
+        net.WriteBool(ar)
+        net.Send(attacker)
+    end)
 end)
 
 hook.Add("OnNPCKilled", "Sakura_KillNPC", function(victim, attacker, inflictor)
     if type(attacker) == "Player" and IsValid(attacker) and victim ~= attacker then
         local idx = victim:EntIndex()
+        -- 标记此次击杀，PostEntityTakeDamage 的定时器会检查此标记并跳过命中反馈
+        npc_kill_sent[attacker:EntIndex() .. "_" .. idx] = true
         net.Start("Sakura_Kill")
         net.WriteBool(headshot_cache[idx] or false)
         net.WriteBool(armor_cache[idx] or false)
