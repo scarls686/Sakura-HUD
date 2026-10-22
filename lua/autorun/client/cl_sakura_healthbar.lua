@@ -1,3 +1,6 @@
+-- 客户端独立解析服务端同步的关系编号，不依赖服务端 D_* 全局枚举。
+local D_ER, D_HT, D_FR, D_LI = 0, 1, 2, 3
+
 -- ===== 配置 ConVar — 生命条基础参数 =====
 local cv_enabled = CreateClientConVar("sakura_health_enabled", "1", true, false)
 local cv_mode    = CreateClientConVar("sakura_health_mode",    "1", true, false)
@@ -13,6 +16,10 @@ local cv_col_friend_b = CreateClientConVar("sakura_health_friend_b", "250", true
 local cv_col_enemy_r = CreateClientConVar("sakura_health_enemy_r", "30",  true, false)
 local cv_col_enemy_g = CreateClientConVar("sakura_health_enemy_g", "144", true, false)
 local cv_col_enemy_b = CreateClientConVar("sakura_health_enemy_b", "255", true, false)
+
+local cv_col_neutral_r = CreateClientConVar("sakura_health_neutral_r", "180", true, false)
+local cv_col_neutral_g = CreateClientConVar("sakura_health_neutral_g", "180", true, false)
+local cv_col_neutral_b = CreateClientConVar("sakura_health_neutral_b", "180", true, false)
 
 local cv_col_bg_r = CreateClientConVar("sakura_health_bg_r", "30",  true, false)
 local cv_col_bg_g = CreateClientConVar("sakura_health_bg_g", "30",  true, false)
@@ -50,6 +57,7 @@ local LANGUAGE = {
         size_h          = "血条高度",
         col_friend      = "友军血条颜色",
         col_enemy       = "敌军血条颜色",
+        col_neutral     = "中立 / 未知血条颜色",
         col_bg          = "背景底色",
         col_dmg         = "受损部分颜色",
         col_flash       = "闪烁颜色",
@@ -72,6 +80,7 @@ local LANGUAGE = {
         size_h          = "Bar Height",
         col_friend      = "Friendly Color",
         col_enemy       = "Enemy Color",
+        col_neutral     = "Neutral / Unknown Color",
         col_bg          = "Background Color",
         col_dmg         = "Damage Color",
         col_flash       = "Flash Color",
@@ -212,6 +221,7 @@ local function AddTargetToCache(ent)
     local timestamp = UnPredictedCurTime()
 
     local is_friend = false
+    local is_neutral = false
     if ent:IsPlayer() then
         local ply = LocalPlayer()
         if ent:Team() == ply:Team() and ent:Team() ~= 0 and ent:Team() ~= 1001 then
@@ -219,8 +229,9 @@ local function AddTargetToCache(ent)
         end
     elseif ent:IsNPC() then
         -- Disposition: D_HT=1(仇恨) D_FR=2(恐惧) D_LI=3(喜爱) D_NU=4(中立)
-        local relation = ent:GetNWInt("Sakura_Health_Relation_" .. LocalPlayer():UniqueID(), 1)
-        is_friend = (relation == 3 or relation == 4)
+        local relation = ent:GetNWInt("Sakura_Health_Relation_" .. LocalPlayer():UniqueID(), D_ER)
+        is_friend = (relation == D_LI)
+        is_neutral = (relation ~= D_LI and relation ~= D_HT and relation ~= D_FR)
     elseif ent:IsNextBot() then
         is_friend = false
     end
@@ -231,6 +242,7 @@ local function AddTargetToCache(ent)
             hp               = hp,
             max_hp           = max_hp,
             is_friend        = is_friend,
+            is_neutral       = is_neutral,
             decay_hp         = hp,
             flash_end_time   = 0,
             last_update_time = timestamp,
@@ -249,6 +261,7 @@ local function AddTargetToCache(ent)
         data.hp               = hp
         data.max_hp           = max_hp
         data.is_friend        = is_friend
+        data.is_neutral       = is_neutral
         data.last_update_time = timestamp
         data.last_pos         = ent:GetPos() + Vector(0, 0, ent:OBBMaxs().z + 10)
         data.fade             = 255
@@ -291,6 +304,7 @@ hook.Add("HUDPaint", "DrawSakuraHealthBar", function()
     local col_dmg    = Color(cv_col_dmg_r:GetInt(),    cv_col_dmg_g:GetInt(),    cv_col_dmg_b:GetInt())
     local col_friend = Color(cv_col_friend_r:GetInt(), cv_col_friend_g:GetInt(), cv_col_friend_b:GetInt())
     local col_enemy  = Color(cv_col_enemy_r:GetInt(),  cv_col_enemy_g:GetInt(),  cv_col_enemy_b:GetInt())
+    local col_neutral = Color(cv_col_neutral_r:GetInt(), cv_col_neutral_g:GetInt(), cv_col_neutral_b:GetInt())
     local col_flash  = Color(cv_col_flash_r:GetInt(),  cv_col_flash_g:GetInt(),  cv_col_flash_b:GetInt())
     local col_armor  = Color(cv_col_armor_r:GetInt(),  cv_col_armor_g:GetInt(),  cv_col_armor_b:GetInt())
 
@@ -340,6 +354,7 @@ hook.Add("HUDPaint", "DrawSakuraHealthBar", function()
                 local decayPct = math.Clamp(data.decay_hp / data.max_hp, 0, 1)
 
                 local baseColor = data.is_friend and col_friend or col_enemy
+                if data.is_neutral then baseColor = col_neutral end
                 local drawColor = baseColor
                 if curTime < data.flash_end_time and entValid then
                     local flashLeft = data.flash_end_time - curTime
@@ -451,6 +466,7 @@ local function BuildSakuraHealthMenu(panel)
 
     AddMixer(GetText("col_enemy"),  "sakura_health_enemy_r",  "sakura_health_enemy_g",  "sakura_health_enemy_b")
     AddMixer(GetText("col_friend"), "sakura_health_friend_r", "sakura_health_friend_g", "sakura_health_friend_b")
+    AddMixer(GetText("col_neutral"), "sakura_health_neutral_r", "sakura_health_neutral_g", "sakura_health_neutral_b")
     AddMixer(GetText("col_bg"),     "sakura_health_bg_r",     "sakura_health_bg_g",     "sakura_health_bg_b",   "sakura_health_bg_a")
     AddMixer(GetText("col_dmg"),    "sakura_health_dmg_r",    "sakura_health_dmg_g",    "sakura_health_dmg_b")
     AddMixer(GetText("col_flash"),  "sakura_health_flash_r",  "sakura_health_flash_g",  "sakura_health_flash_b")
@@ -474,6 +490,10 @@ local function BuildSakuraHealthMenu(panel)
         RunConsoleCommand("sakura_health_enemy_r", "30")
         RunConsoleCommand("sakura_health_enemy_g", "144")
         RunConsoleCommand("sakura_health_enemy_b", "255")
+
+        RunConsoleCommand("sakura_health_neutral_r", "180")
+        RunConsoleCommand("sakura_health_neutral_g", "180")
+        RunConsoleCommand("sakura_health_neutral_b", "180")
 
         RunConsoleCommand("sakura_health_bg_r", "30")
         RunConsoleCommand("sakura_health_bg_g", "30")

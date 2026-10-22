@@ -26,6 +26,17 @@ local function GetTargetFaction(npc)
     return SAKURA_HEALTH.NpcFactions[npc:GetClass()] or "unknown"
 end
 
+local HostileFactions = { ants = true, zombies = true, combine = true }
+
+local function GetHealthBarRelation(npc, rawRelation)
+    -- 只为中立关系提供显示回退；明确的喜欢、仇恨和恐惧关系始终优先。
+    -- 不修改 NPC 的 AI 关系，也不再根据 GetEnemy() 临时覆盖血条分类。
+    if rawRelation == D_NU and HostileFactions[GetTargetFaction(npc)] then
+        return D_HT
+    end
+    return rawRelation or D_ER
+end
+
 for k, ent in pairs(ents.GetAll()) do
     if ent:IsNPC() or ent:IsPlayer() or ent:IsNextBot() then
         table.insert(SAKURA_HEALTH.entities, ent)
@@ -77,17 +88,12 @@ hook.Add("Think", "SakuraHealthBarUpdate", function()
                     end
                 end
 
-                -- Disposition: D_HT=1(仇恨) D_FR=2(恐惧) D_LI=3(喜爱) D_NU=4(中立)
-                -- 注意：Disposition() 返回的是关系类别，与战斗状态独立。
-                -- GMod 沙盒中许多 NPC 对玩家的关系类别默认为 D_NU=4，
-                -- 即使它们正在主动攻击；因此额外检查 GetEnemy() 以修正误判。
+                -- 血条显示关系与 AI 当前攻击目标分离，避免丢失目标时在敌我颜色间跳变。
                 if target:IsNPC() then
                     for _, ply in pairs(player.GetAll()) do
                         if IsValid(ply) then
-                            local disp = target:Disposition(ply)
-                            if IsValid(target:GetEnemy()) and target:GetEnemy() == ply then
-                                disp = 1 -- 强制 D_HT：当前正以该玩家为目标
-                            end
+                            local rawDisp = target:Disposition(ply)
+                            local disp = GetHealthBarRelation(target, rawDisp)
                             target:SetNWInt("Sakura_Health_Relation_" .. ply:UniqueID(), disp)
                         end
                     end
