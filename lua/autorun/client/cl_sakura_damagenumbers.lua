@@ -13,45 +13,8 @@ if CLIENT then
     local cv_col_crit_g = CreateClientConVar("sakura_dmgnum_col_crit_g", "183", true, false)
     local cv_col_crit_b = CreateClientConVar("sakura_dmgnum_col_crit_b", "197", true, false)
 
-    -- ===== 多语言系统 =====
-    local LANGUAGE = {
-        zh = {
-            menu_title = "伤害跳字设置",
-            enable = "启用伤害跳字",
-            font_select = "字体样式",
-            font_size = "数字大小",
-            lifetime = "存在时间 (秒)",
-            col_norm = "普通伤害颜色",
-            col_crit = "爆头伤害颜色",
-            reset = "重置为默认值",
-            reset_desc = "伤害跳字设置已重置",
-            language = "语言"
-        },
-        en = {
-            menu_title = "Damage Numbers Settings",
-            enable = "Enable Damage Numbers",
-            font_select = "Font Style",
-            font_size = "Number Size",
-            lifetime = "Lifetime (Seconds)",
-            col_norm = "Normal Damage Color",
-            col_crit = "Headshot Color",
-            reset = "Reset to Default",
-            reset_desc = "Damage number settings reset",
-            language = "Language"
-        }
-    }
-
-    local function GetCurrentLang()
-        return cookie.GetString("sakura_hud_lang", "zh") 
-    end
-
-    local function SetLang(lang)
-        cookie.Set("sakura_hud_lang", lang)
-    end
-
     local function GetText(key)
-        local lang = GetCurrentLang()
-        return LANGUAGE[lang] and LANGUAGE[lang][key] or LANGUAGE.zh[key] or key
+        return language.GetPhrase("sakura_hud.damagenumbers." .. key)
     end
 
     -- ===== 字体管理 =====
@@ -155,23 +118,13 @@ if CLIENT then
         panel:ClearControls()
         panel:Help(GetText("menu_title"))
 
-        local langCombo = panel:ComboBox(GetText("language"))
-        langCombo:AddChoice("中文", "zh", GetCurrentLang() == "zh")
-        langCombo:AddChoice("English", "en", GetCurrentLang() == "en")
-        langCombo.OnSelect = function(self, index, value, data)
-            SetLang(data)
-            timer.Simple(0.1, function()
-                if IsValid(panel) then BuildSakuraDamageNumMenu(panel) end
-            end)
-        end
-
         panel:Help(" ")
         panel:CheckBox(GetText("enable"), "sakura_dmgnum_enable")
 
         local fontCombo = panel:ComboBox(GetText("font_select"), "sakura_dmgnum_font")
-        fontCombo:AddChoice("Sakura Style (FZSJ-LIANRSZYHC)", "FZSJ-LIANRSZYHC")
-        fontCombo:AddChoice("Clean Style (Segoe UI Light)", "Segoe UI Light")
-        fontCombo:AddChoice("Default (Arial)", "Arial")
+        fontCombo:AddChoice(GetText("font_sakura"), "FZSJ-LIANRSZYHC")
+        fontCombo:AddChoice(GetText("font_clean"), "Segoe UI Light")
+        fontCombo:AddChoice(GetText("font_default"), "Arial")
         
         panel:NumSlider(GetText("font_size"), "sakura_dmgnum_size", 10, 100, 0)
         panel:NumSlider(GetText("lifetime"), "sakura_dmgnum_lifetime", 0.5, 5, 1)
@@ -224,7 +177,7 @@ if CLIENT then
     end
 
     hook.Add("PopulateToolMenu", "SakuraDamageNum_Options", function()
-        spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraDamageNum_Settings", "伤害跳字设置", "", "", function(panel)
+        spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraDamageNum_Settings", "#sakura_hud.damagenumbers.menu_title", "", "", function(panel)
             BuildSakuraDamageNumMenu(panel)
         end)
     end)

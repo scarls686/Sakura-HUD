@@ -43,67 +43,8 @@ local cv_col_armor_b   = CreateClientConVar("sakura_health_armor_b", "255", true
 -- ===== 目标缓存表 =====
 local TargetCache = {}
 
--- ===== 多语言字符串 =====
-local LANGUAGE = {
-    zh = {
-        menu_title      = "血条显示设置",
-        enable          = "启用血条显示",
-        mode            = "显示模式",
-        mode_1          = "视线内所有目标",
-        mode_2          = "仅准星瞄准目标",
-        mode_3          = "范围内所有目标 (透视)",
-        range           = "最大显示距离",
-        size_w          = "血条宽度",
-        size_h          = "血条高度",
-        col_friend      = "友军血条颜色",
-        col_enemy       = "敌军血条颜色",
-        col_neutral     = "中立 / 未知血条颜色",
-        col_bg          = "背景底色",
-        col_dmg         = "受损部分颜色",
-        col_flash       = "闪烁颜色",
-        armor_section   = "── 护甲条设置 ──",
-        armor_height    = "护甲条高度",
-        col_armor       = "护甲条颜色",
-        reset           = "重置为默认值",
-        reset_desc      = "已重置血条设置",
-        language        = "语言"
-    },
-    en = {
-        menu_title      = "Health Bar Settings",
-        enable          = "Enable Health Bar",
-        mode            = "Display Mode",
-        mode_1          = "Visible Targets",
-        mode_2          = "Crosshair Only",
-        mode_3          = "All Targets (X-Ray)",
-        range           = "Max Distance",
-        size_w          = "Bar Width",
-        size_h          = "Bar Height",
-        col_friend      = "Friendly Color",
-        col_enemy       = "Enemy Color",
-        col_neutral     = "Neutral / Unknown Color",
-        col_bg          = "Background Color",
-        col_dmg         = "Damage Color",
-        col_flash       = "Flash Color",
-        armor_section   = "── Armor Bar Settings ──",
-        armor_height    = "Armor Bar Height",
-        col_armor       = "Armor Bar Color",
-        reset           = "Reset to Default",
-        reset_desc      = "Settings reset",
-        language        = "Language"
-    }
-}
-
-local function GetCurrentLang()
-    return cookie.GetString("sakura_hud_lang", "zh")
-end
-
-local function SetLang(lang)
-    cookie.Set("sakura_hud_lang", lang)
-end
-
 local function GetText(key)
-    local lang = GetCurrentLang()
-    return LANGUAGE[lang] and LANGUAGE[lang][key] or LANGUAGE.zh[key] or key
+    return language.GetPhrase("sakura_hud.healthbar." .. key)
 end
 
 -- ===== 准星目标检测 =====
@@ -135,8 +76,7 @@ end
 -- ===== 目标收集 =====
 local TargetClasses = {"npc_*", "monster_*"}
 
--- IsLineOfSightClear 从实体（GetShootPos）向玩家发射，掩体后的 NPC 即使躯干暴露也可能返回 false，
--- 导致血条淡出卡住。改为从玩家眼睛向实体 OBB 中心/顶部发射，正确判断玩家是否能看到实体。
+-- 从玩家视角检测目标中心和上部，避免 NPC 射击点被遮挡时误判为不可见。
 local _losFilter = {}
 local function IsEntityVisible(ent, playerPos)
     _losFilter[1] = LocalPlayer()
@@ -383,27 +323,20 @@ hook.Add("HUDPaint", "DrawSakuraHealthBar", function()
                     surface.DrawRect(rx, ry, BAR_W * hpPct, BAR_H)
                 end
 
-                -- ──────────────────────────────
-                -- 绘制护甲条（紧贴生命条上方）
-                -- 仅当目标拥有护甲且护甲高度 > 0 时绘制；无衰减/闪烁动画
-                -- ──────────────────────────────
+                -- 护甲条紧贴生命条上方，不使用受伤衰减或闪烁动画。
                 if entValid and ARMOR_H > 0 then
                     local hasArmor  = data.ent:GetNWBool("Sakura_Health_HasArmor", false)
                     local curArmor  = data.ent:GetNWInt("Sakura_Health_Armor", 0)
                     local maxArmor  = data.ent:GetNWInt("Sakura_Health_ArmorMax", 0)
 
-                    -- 仅在目标确实拥有护甲系统且最大护甲 > 0 时绘制护甲条
                     if hasArmor and maxArmor > 0 then
                         local armorPct = math.Clamp(curArmor / maxArmor, 0, 1)
 
-                        -- 护甲条 Y 坐标：生命条顶边缘上方（紧贴，无间隙）
                         local ary = ry - ARMOR_H
 
-                        -- 护甲条背景（与生命条底色一致）
                         surface.SetDrawColor(alphaBg)
                         surface.DrawRect(rx, ary, BAR_W, ARMOR_H)
 
-                        -- 护甲条填充
                         if armorPct > 0 then
                             local alphaArmor = Color(col_armor.r, col_armor.g, col_armor.b, alpha)
                             surface.SetDrawColor(alphaArmor)
@@ -420,16 +353,6 @@ end)
 local function BuildSakuraHealthMenu(panel)
     panel:ClearControls()
     panel:Help(GetText("menu_title"))
-
-    local langCombo = panel:ComboBox(GetText("language"))
-    langCombo:AddChoice("中文",    "zh", GetCurrentLang() == "zh")
-    langCombo:AddChoice("English", "en", GetCurrentLang() == "en")
-    langCombo.OnSelect = function(self, index, value, data)
-        SetLang(data)
-        timer.Simple(0.1, function()
-            if IsValid(panel) then BuildSakuraHealthMenu(panel) end
-        end)
-    end
 
     panel:Help(" ")
     panel:CheckBox(GetText("enable"), "sakura_health_enabled")
@@ -518,5 +441,5 @@ local function BuildSakuraHealthMenu(panel)
 end
 
 hook.Add("PopulateToolMenu", "SakuraHealth_Options", function()
-    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraHealth_Settings", "血条显示设置", "", "", function(p) BuildSakuraHealthMenu(p) end)
+    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraHealth_Settings", "#sakura_hud.healthbar.menu_title", "", "", function(p) BuildSakuraHealthMenu(p) end)
 end)

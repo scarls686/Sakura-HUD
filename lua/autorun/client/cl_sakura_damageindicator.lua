@@ -19,45 +19,8 @@ local function GetResponsive(val)
     return val * (ScrH() / 1080)
 end
 
--- ===== 多语言系统 =====
-local LANGUAGE = {
-    zh = {
-        menu_title = "受击方向指示设置",
-        enable = "启用受击方向指示",
-        size = "指示器大小",
-        distance = "指示器距离",
-        duration = "显示时长",
-        col_armor = "护甲伤害颜色",
-        col_health = "生命伤害颜色",
-        reset = "重置为默认值",
-        reset_desc = "已重置所有数值",
-        language = "语言"
-    },
-    en = {
-        menu_title = "Damage Direction Indicator Settings",
-        enable = "Enable Damage Indicator",
-        size = "Indicator Size",
-        distance = "Indicator Distance",
-        duration = "Display Duration",
-        col_armor = "Armor Damage Color",
-        col_health = "Health Damage Color",
-        reset = "Reset to Default",
-        reset_desc = "Settings have been reset",
-        language = "Language"
-    }
-}
-
-local function GetCurrentLang()
-    return cookie.GetString("sakura_hud_lang", "zh")
-end
-
-local function SetLang(lang)
-    cookie.Set("sakura_hud_lang", lang)
-end
-
 local function GetText(key)
-    local lang = GetCurrentLang()
-    return LANGUAGE[lang] and LANGUAGE[lang][key] or LANGUAGE.zh[key] or key
+    return language.GetPhrase("sakura_hud.damageindicator." .. key)
 end
 
 -- ===== 核心逻辑 =====
@@ -127,14 +90,6 @@ local function BuildSakuraDamageIndicatorMenu(panel)
     panel:ClearControls()
     panel:Help(GetText("menu_title"))
     
-    local langCombo = panel:ComboBox(GetText("language"))
-    langCombo:AddChoice("中文", "zh", GetCurrentLang() == "zh")
-    langCombo:AddChoice("English", "en", GetCurrentLang() == "en")
-    langCombo.OnSelect = function(_, _, _, data)
-        SetLang(data)
-        timer.Simple(0.1, function() if IsValid(panel) then BuildSakuraDamageIndicatorMenu(panel) end end)
-    end
-    
     panel:Help(" ")
     panel:CheckBox(GetText("enable"), "sakura_damage_indicator_enabled")
     panel:NumSlider(GetText("size"), "sakura_damage_indicator_size", 64, 400, 0)
@@ -185,7 +140,7 @@ local function BuildSakuraDamageIndicatorMenu(panel)
 end
 
 hook.Add("PopulateToolMenu", "SakuraDamageIndicator_Options", function()
-    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraDamageIndicator_Settings", "受击方向指示设置", "", "", function(panel)
+    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraDamageIndicator_Settings", "#sakura_hud.damageindicator.menu_title", "", "", function(panel)
         BuildSakuraDamageIndicatorMenu(panel)
     end)
 end)

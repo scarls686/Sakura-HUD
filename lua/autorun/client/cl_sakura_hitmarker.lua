@@ -25,47 +25,8 @@ local function GetResolutionScale()
     return currentHeight / baseHeight
 end
 
--- ===== 多语言系统 =====
-local LANGUAGE = {
-    zh = {
-        menu_title = "命中反馈设置",
-        enable = "启用命中反馈",
-        size = "花瓣大小",
-        init_dist = "基础半径 (准星距)",
-        spread_dist = "击杀散开距离",
-        col_norm = "普通命中颜色",
-        col_crit = "爆头命中颜色",
-        col_armor = "护甲命中颜色",
-        reset = "重置为默认值",
-        reset_desc = "已重置所有数值",
-        language = "语言"
-    },
-    en = {
-        menu_title = "Hitmarker Settings",
-        enable = "Enable Hitmarker",
-        size = "Petal Size",
-        init_dist = "Initial Radius",
-        spread_dist = "Kill Spread Radius",
-        col_norm = "Normal Color",
-        col_crit = "Headshot Color",
-        col_armor = "Armor Hit Color",
-        reset = "Reset to Default",
-        reset_desc = "Settings have been reset",
-        language = "Language"
-    }
-}
-
-local function GetCurrentLang()
-    return cookie.GetString("sakura_hud_lang", "zh")
-end
-
-local function SetLang(lang)
-    cookie.Set("sakura_hud_lang", lang)
-end
-
 local function GetText(key)
-    local lang = GetCurrentLang()
-    return LANGUAGE[lang] and LANGUAGE[lang][key] or LANGUAGE.zh[key] or key
+    return language.GetPhrase("sakura_hud.hitmarker." .. key)
 end
 
 local function AddMarker(isHeadshot, isKill, isArmor)
@@ -171,18 +132,6 @@ local function BuildSakuraHitmarkerMenu(panel)
 
     panel:Help(GetText("menu_title"))
 
-    local langCombo = panel:ComboBox(GetText("language"))
-    langCombo:AddChoice("中文", "zh", GetCurrentLang() == "zh")
-    langCombo:AddChoice("English", "en", GetCurrentLang() == "en")
-    langCombo.OnSelect = function(self, index, value, data)
-        SetLang(data)
-        timer.Simple(0.1, function()
-            if IsValid(panel) then
-                BuildSakuraHitmarkerMenu(panel)
-            end
-        end)
-    end
-
     panel:Help(" ")
     panel:CheckBox(GetText("enable"), "sakura_hitmarker_enabled")
 
@@ -253,7 +202,7 @@ local function BuildSakuraHitmarkerMenu(panel)
 end
 
 hook.Add("PopulateToolMenu", "SakuraHitmarker_Options", function()
-    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraHitmarker_Settings", "命中反馈设置", "", "", function(panel)
+    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraHitmarker_Settings", "#sakura_hud.hitmarker.menu_title", "", "", function(panel)
         BuildSakuraHitmarkerMenu(panel)
     end)
 end)

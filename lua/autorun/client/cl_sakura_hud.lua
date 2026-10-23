@@ -1,23 +1,27 @@
 if SERVER then return end
 
+local function GetText(key)
+    return language.GetPhrase("sakura_hud.hud." .. key)
+end
+
 -- ===== 玩家可调整设置 =====
-local cv_offX = CreateClientConVar("sakura_hud_x", "160", true, false, "前后距离")
-local cv_offY = CreateClientConVar("sakura_hud_y", "-120", true, false, "左右位移")
-local cv_offZ = CreateClientConVar("sakura_hud_z", "-50", true, false, "上下位移")
+local cv_offX = CreateClientConVar("sakura_hud_x", "160", true, false, GetText("help_forward"))
+local cv_offY = CreateClientConVar("sakura_hud_y", "-120", true, false, GetText("help_right"))
+local cv_offZ = CreateClientConVar("sakura_hud_z", "-50", true, false, GetText("help_up"))
 
-local cv_rotLeft  = CreateClientConVar("sakura_hud_rot_left", "-25", true, false, "左右侧翻")
-local cv_rotTop   = CreateClientConVar("sakura_hud_rot_top", "-15", true, false, "上下俯仰")
-local cv_rotPoint = CreateClientConVar("sakura_hud_rot_point", "5", true, false, "平面旋转")
+local cv_rotLeft  = CreateClientConVar("sakura_hud_rot_left", "-25", true, false, GetText("help_pitch"))
+local cv_rotTop   = CreateClientConVar("sakura_hud_rot_top", "-15", true, false, GetText("help_yaw"))
+local cv_rotPoint = CreateClientConVar("sakura_hud_rot_point", "5", true, false, GetText("help_roll"))
 
-local cv_scale = CreateClientConVar("sakura_hud_scale", "1.0", true, false, "HUD整体大小", 0.5, 2.0)
+local cv_scale = CreateClientConVar("sakura_hud_scale", "1.0", true, false, GetText("help_scale"), 0.5, 2.0)
 
-local cv_aimX = CreateClientConVar("sakura_hud_aim_x", "135", true, false, "瞄准弹药横向偏移")
-local cv_aimY = CreateClientConVar("sakura_hud_aim_y", "0", true, false, "瞄准弹药纵向偏移")
+local cv_aimX = CreateClientConVar("sakura_hud_aim_x", "135", true, false, GetText("help_aim_x"))
+local cv_aimY = CreateClientConVar("sakura_hud_aim_y", "0", true, false, GetText("help_aim_y"))
 
-local cv_enabled = CreateClientConVar("sakura_hud_enabled", "1", true, false, "HUD总开关")
-local cv_aimMode = CreateClientConVar("sakura_hud_aim_mode", "1", true, false, "瞄准模式弹药切换")
-local cv_blur = CreateClientConVar("sakura_hud_blur", "1", true, false, "背景模糊效果")
-local cv_shadow = CreateClientConVar("sakura_hud_shadow", "1", true, false, "文字阴影效果")
+local cv_enabled = CreateClientConVar("sakura_hud_enabled", "1", true, false, GetText("help_enabled"))
+local cv_aimMode = CreateClientConVar("sakura_hud_aim_mode", "1", true, false, GetText("help_aim_mode"))
+local cv_blur = CreateClientConVar("sakura_hud_blur", "1", true, false, GetText("help_blur"))
+local cv_shadow = CreateClientConVar("sakura_hud_shadow", "1", true, false, GetText("help_shadow"))
 
 -- ===== 基础配置 =====
 local BASE_W, BASE_H = 1920, 1080
@@ -30,7 +34,7 @@ local BLUR_MAT = CreateMaterial("SakuraHUD_BlurPanel", "Refract", {
     ["$model"]          = "1",
     ["$nocull"]         = "1",
 })
--- 花瓣左侧边距（给飘落花瓣留出空间，防止被面板左侧边缘遮挡）
+-- 为飘落花瓣预留左侧空间。
 local PETAL_MARGIN = 120
 
 local COLOR_SAKURA   = Color(255, 183, 197, 255)
@@ -53,85 +57,6 @@ end)
 
 local function Scale(val)
     return val * (ScrH() / BASE_H)
-end
-
--- ===== 多语言系统 =====
-local LANGUAGE = {
-    zh = {
-        hp = "HP",
-        armor = "ARMOR",
-        grenade = "Grenade: ",
-        menu_title = "Sakura HUD - 3D空间定位设置",
-        menu_size = "=== 整体大小 ===",
-        menu_scale = "HUD缩放比例",
-        menu_position = "=== 空间位置 ===",
-        menu_forward = "前后位置 (Forward)",
-        menu_right = "左右位置 (Right)",
-        menu_up = "上下位置 (Up)",
-        menu_rotation = "=== 旋转角度 ===",
-        menu_pitch = "左右侧翻",
-        menu_yaw = "上下俯仰",
-        menu_roll = "平面旋转",
-        menu_aim = "=== 瞄准模式 ===",
-        menu_aim_x = "瞄准弹药横移",
-        menu_aim_y = "瞄准弹药纵移",
-        menu_aim_mode = "瞄准模式弹药切换",
-        menu_language = "=== 语言设置 ===",
-        menu_poison = "=== 中毒效果 ===",
-        menu_poison_duration = "中毒效果时长",
-        menu_poison_tooltip = "调整HUD中毒视觉效果持续时间（仅影响HUD显示，不影响实际游戏机制）",
-        menu_toggles = "=== 开关选项 ===",
-        menu_enabled = "HUD总开关",
-        menu_blur = "背景模糊效果",
-        menu_shadow = "文字阴影效果",
-        menu_reset = "重置为默认值",
-        language = "语言"
-    },
-    en = {
-        hp = "HP",
-        armor = "ARMOR",
-        grenade = "Grenade: ",
-        menu_title = "Sakura HUD - 3D Positioning Settings",
-        menu_size = "=== Scale ===",
-        menu_scale = "HUD Scale",
-        menu_position = "=== Position ===",
-        menu_forward = "Forward Position",
-        menu_right = "Right Position",
-        menu_up = "Up Position",
-        menu_rotation = "=== Rotation ===",
-        menu_pitch = "Pitch (Left/Right Tilt)",
-        menu_yaw = "Yaw (Up/Down Tilt)",
-        menu_roll = "Roll (Plane Rotation)",
-        menu_aim = "=== Aim Mode ===",
-        menu_aim_x = "Aim Ammo X Offset",
-        menu_aim_y = "Aim Ammo Y Offset",
-        menu_aim_mode = "Aim Mode Ammo Switch",
-        menu_language = "=== Language ===",
-        menu_poison = "=== Poison Effect ===",
-        menu_poison_duration = "Poison Effect Duration",
-        menu_poison_tooltip = "Adjust poison visual effect duration (HUD only, does not affect gameplay)",
-        menu_toggles = "=== Toggles ===",
-        menu_enabled = "HUD Enabled",
-        menu_blur = "Background Blur",
-        menu_shadow = "Text Shadow",
-        menu_reset = "Reset to Default",
-        language = "Language"
-    }
-}
-
--- 获取当前语言
-local function GetCurrentLang()
-    return cookie.GetString("sakura_hud_lang", "zh")
-end
-
--- 设置语言
-local function SetLang(lang)
-    cookie.Set("sakura_hud_lang", lang)
-end
-
-local function GetText(key)
-    local lang = GetCurrentLang()
-    return LANGUAGE[lang] and LANGUAGE[lang][key] or LANGUAGE.zh[key] or key
 end
 
 -- ===== 字体定义 =====
@@ -280,10 +205,7 @@ local function DrawSegmentedArmor3D(x, y, radius, percentage, thickness, segment
     end
 end
 
--- 绘制5片樱花瓣形式的生命值显示（改进版）
--- 参数：中心坐标(centerX, centerY)，单片大小，当前生命值，最大生命值
 local function DrawSakuraHealth3D(centerX, centerY, size, hp, maxHP)
-    -- 异常值保护：确保 maxHP 合法
     maxHP = (maxHP and maxHP > 0) and maxHP or 100
     -- 每片花瓣代表 20% 血量
     local hpPerPetal = maxHP / 5
@@ -612,11 +534,12 @@ hook.Add("HUDPaint", "SakuraHUD_Main", function()
                 end
 
                 if grenades > 0 then
+                    local grenadeText = GetText("grenade") .. " "
                     surface.SetFont("Sakura_ThemeFont")
-                    local tw, _ = surface.GetTextSize(GetText("grenade"))
+                    local tw, _ = surface.GetTextSize(grenadeText)
 
                     DrawTextShadow(
-                        GetText("grenade"),
+                        grenadeText,
                         "Sakura_ThemeFont",
                         flowerX + 110, flowerY + 165,
                         COLOR_SAKURA,
@@ -665,19 +588,6 @@ local function BuildSakuraHUDMenu(panel)
     panel:ClearControls()
 
     panel:Help(GetText("menu_title"))
-
-    panel:Help(GetText("menu_language"))
-    local langCombo = panel:ComboBox(GetText("language"))
-    langCombo:AddChoice("中文", "zh", GetCurrentLang() == "zh")
-    langCombo:AddChoice("English", "en", GetCurrentLang() == "en")
-    langCombo.OnSelect = function(self, index, value, data)
-        SetLang(data)
-        timer.Simple(0.1, function()
-            if IsValid(panel) then
-                BuildSakuraHUDMenu(panel)
-            end
-        end)
-    end
 
     panel:Help(GetText("menu_toggles"))
     panel:CheckBox(GetText("menu_enabled"), "sakura_hud_enabled")
@@ -731,7 +641,7 @@ local function BuildSakuraHUDMenu(panel)
 end
 
 hook.Add("PopulateToolMenu", "SakuraHUD_Menu", function()
-    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraHUD_Settings", "设置面板", "", "", function(panel)
+    spawnmenu.AddToolMenuOption("Options", "Sakura HUD", "SakuraHUD_Settings", "#sakura_hud.hud.menu_entry", "", "", function(panel)
         BuildSakuraHUDMenu(panel)
     end)
 end)
