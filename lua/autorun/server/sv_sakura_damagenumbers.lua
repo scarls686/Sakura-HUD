@@ -21,6 +21,7 @@ if SERVER then
     end)
 
     hook.Add("PostEntityTakeDamage", "Sakura_DmgNum_PostDamage", function(target, dmgInfo, took)
+        if SakuraMES.IsTracked(target, dmgInfo) then CleanCache(target); return end
         if not cv_sv_enable:GetBool() then return end
         if not took then return end
         if not IsValid(target) then return end
@@ -53,9 +54,27 @@ if SERVER then
             net.WriteFloat(damage)
             net.WriteVector(position)
             net.WriteBool(isHeadshot)
+            net.WriteBool(false)
         net.Send(attacker)
 
         CleanCache(target)
+    end)
+
+    hook.Add("MEShieldDamageResolved", "Sakura_MES_DamageNumbers", function(target, result)
+        CleanCache(target)
+        if not cv_sv_enable:GetBool() then return end
+        local attacker = result.attacker
+        if not IsValid(attacker) or not attacker:IsPlayer() or attacker == target then return end
+        for _, layer in ipairs({{result.shieldDamage, true}, {result.armorDamage, true}, {result.healthDamage, false}}) do
+            if layer[1] > 0 then
+                net.Start("Sakura_DamageNumber")
+                net.WriteFloat(layer[1])
+                net.WriteVector(result.position)
+                net.WriteBool(result.hitGroup == HITGROUP_HEAD)
+                net.WriteBool(layer[2])
+                net.Send(attacker)
+            end
+        end
     end)
 
     hook.Add("EntityRemoved", "Sakura_DmgNum_Cleanup", CleanCache)

@@ -36,9 +36,14 @@ local function SendDamageIndicator(victim, attackerPos, isArmorDamage)
     net.Send(victim)
 end
 
--- 记录受击状态；Hook 名称前缀不保证执行顺序。
-hook.Add("EntityTakeDamage", "A_Sakura_DamageIndicator_Track", function(victim, dmginfo)
+hook.Add("MEShieldDamageResolved", "Sakura_MES_DamageDirection", function(victim, result)
+    if not IsValid(victim) or not victim:IsPlayer() or not SakuraMES.HasFeedback(result) then return end
+    SendDamageIndicator(victim, result.sourcePosition, result.shieldDamage > 0 or result.armorDamage > 0 or result.gate == "shield")
+end)
+
+hook.Add("EntityTakeDamage", "Sakura_DamageIndicator_Track", function(victim, dmginfo)
     if not IsValid(victim) or not victim:IsPlayer() then return end
+    if SakuraMES.UsesEvents(victim) then return end
     if victim:HasGodMode() then return end
     if not ShouldShowIndicator(victim) then return end
 

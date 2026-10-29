@@ -13,6 +13,10 @@ if CLIENT then
     local cv_col_crit_g = CreateClientConVar("sakura_dmgnum_col_crit_g", "183", true, false)
     local cv_col_crit_b = CreateClientConVar("sakura_dmgnum_col_crit_b", "197", true, false)
 
+    local cv_col_shield_r = CreateClientConVar("sakura_dmgnum_col_shield_r", "0", true, false)
+    local cv_col_shield_g = CreateClientConVar("sakura_dmgnum_col_shield_g", "191", true, false)
+    local cv_col_shield_b = CreateClientConVar("sakura_dmgnum_col_shield_b", "255", true, false)
+
     local function GetText(key)
         return language.GetPhrase("sakura_hud.damagenumbers." .. key)
     end
@@ -51,6 +55,8 @@ if CLIENT then
         local amount = net.ReadFloat()
         local pos = net.ReadVector()
         local isHeadshot = net.ReadBool()
+        local isShield = net.ReadBool()
+        if amount ~= amount or amount <= 0 or amount == math.huge then return end
 
         local data = {
             text = tostring(math.Round(amount)),
@@ -60,6 +66,7 @@ if CLIENT then
             startTime = UnPredictedCurTime(),
             lifetime = cv_lifetime:GetFloat(),
             isHeadshot = isHeadshot,
+            isShield = isShield,
             alpha = 255
         }
         
@@ -73,6 +80,7 @@ if CLIENT then
         local frameTime = RealFrameTime()
         local col_norm = Color(cv_col_norm_r:GetInt(), cv_col_norm_g:GetInt(), cv_col_norm_b:GetInt())
         local col_crit = Color(cv_col_crit_r:GetInt(), cv_col_crit_g:GetInt(), cv_col_crit_b:GetInt())
+        local col_shield = Color(cv_col_shield_r:GetInt(), cv_col_shield_g:GetInt(), cv_col_shield_b:GetInt())
 
         for i = #active_numbers, 1, -1 do
             local dmgData = active_numbers[i]
@@ -98,7 +106,7 @@ if CLIENT then
                 local screenPos = dmgData.pos:ToScreen()
 
                 if screenPos.visible then
-                    local drawColor = dmgData.isHeadshot and col_crit or col_norm
+                    local drawColor = dmgData.isShield and col_shield or (dmgData.isHeadshot and col_crit or col_norm)
                     draw.SimpleText(
                         dmgData.text,
                         currentFontName,
@@ -155,6 +163,19 @@ if CLIENT then
         end
         panel:AddItem(cpCrit)
 
+        panel:ControlHelp("\n" .. GetText("col_shield"))
+        local cpShield = vgui.Create("DColorMixer", panel)
+        cpShield:SetPalette(true)
+        cpShield:SetAlphaBar(false)
+        cpShield:SetColor(Color(cv_col_shield_r:GetInt(), cv_col_shield_g:GetInt(), cv_col_shield_b:GetInt()))
+        cpShield:SetTall(100)
+        cpShield.ValueChanged = function(_, col)
+            RunConsoleCommand("sakura_dmgnum_col_shield_r", tostring(col.r))
+            RunConsoleCommand("sakura_dmgnum_col_shield_g", tostring(col.g))
+            RunConsoleCommand("sakura_dmgnum_col_shield_b", tostring(col.b))
+        end
+        panel:AddItem(cpShield)
+
         panel:Help(" ")
         local btnReset = panel:Button(GetText("reset"))
         btnReset.DoClick = function()
@@ -168,6 +189,9 @@ if CLIENT then
             RunConsoleCommand("sakura_dmgnum_col_crit_r", "255")
             RunConsoleCommand("sakura_dmgnum_col_crit_g", "183")
             RunConsoleCommand("sakura_dmgnum_col_crit_b", "197")
+            RunConsoleCommand("sakura_dmgnum_col_shield_r", "0")
+            RunConsoleCommand("sakura_dmgnum_col_shield_g", "191")
+            RunConsoleCommand("sakura_dmgnum_col_shield_b", "255")
 
             notification.AddLegacy(GetText("reset_desc"), NOTIFY_GENERIC, 3)
             timer.Simple(0.1, function()

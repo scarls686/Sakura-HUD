@@ -371,8 +371,10 @@ hook.Add("HUDPaint", "SakuraHUD_Main", function()
 
     local hp = math.max(ply:Health(), 0)
     local maxHP = math.max(ply:GetMaxHealth(), 1)
-    local maxArmor = math.max(ply:GetMaxArmor(), 1)
-    local realArmor = ply:Armor()
+    local protection = SakuraMES.GetAP(ply)
+    local realArmor = protection and protection.current or 0
+    local maxArmor = protection and protection.maximum or 1
+    local protectionLabel = GetText("ap")
     local wep = ply:GetActiveWeapon()
 
     local armorLerpSpeed = (realArmor < visualArmor) and 25 or 15
@@ -452,7 +454,7 @@ hook.Add("HUDPaint", "SakuraHUD_Main", function()
                 TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER
             )
             DrawTextShadow(
-                GetText("armor"),
+                protectionLabel,
                 "Sakura_ThemeFont",
                 flowerX + 140, flowerY + 10,
                 COLOR_WHITE,
@@ -464,7 +466,7 @@ hook.Add("HUDPaint", "SakuraHUD_Main", function()
                 local plates = ply:GetArmorPlates()
                 if plates and plates > 0 then
                     surface.SetFont("Sakura_ThemeFont")
-                    local armorTextW, _ = surface.GetTextSize(GetText("armor"))
+                    local armorTextW, _ = surface.GetTextSize(protectionLabel)
 
                     DrawTextShadow(
                         plates,
@@ -479,7 +481,7 @@ hook.Add("HUDPaint", "SakuraHUD_Main", function()
             local wz_plates = ply:GetAmmoCount("WZ_ARMORPLATE") or 0
             if wz_plates > 0 then
                 surface.SetFont("Sakura_ThemeFont")
-                local armorTextW, _ = surface.GetTextSize(GetText("armor"))
+                local armorTextW, _ = surface.GetTextSize(protectionLabel)
                 DrawTextShadow(
                     wz_plates,
                     "Sakura3D_Medium",

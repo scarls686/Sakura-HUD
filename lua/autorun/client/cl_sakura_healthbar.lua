@@ -21,6 +21,10 @@ local cv_col_neutral_r = CreateClientConVar("sakura_health_neutral_r", "180", tr
 local cv_col_neutral_g = CreateClientConVar("sakura_health_neutral_g", "180", true, false)
 local cv_col_neutral_b = CreateClientConVar("sakura_health_neutral_b", "180", true, false)
 
+local cv_col_armored_r = CreateClientConVar("sakura_health_armored_r", "255", true, false)
+local cv_col_armored_g = CreateClientConVar("sakura_health_armored_g", "195", true, false)
+local cv_col_armored_b = CreateClientConVar("sakura_health_armored_b", "48", true, false)
+
 local cv_col_bg_r = CreateClientConVar("sakura_health_bg_r", "30",  true, false)
 local cv_col_bg_g = CreateClientConVar("sakura_health_bg_g", "30",  true, false)
 local cv_col_bg_b = CreateClientConVar("sakura_health_bg_b", "30",  true, false)
@@ -247,6 +251,7 @@ hook.Add("HUDPaint", "DrawSakuraHealthBar", function()
     local col_neutral = Color(cv_col_neutral_r:GetInt(), cv_col_neutral_g:GetInt(), cv_col_neutral_b:GetInt())
     local col_flash  = Color(cv_col_flash_r:GetInt(),  cv_col_flash_g:GetInt(),  cv_col_flash_b:GetInt())
     local col_armor  = Color(cv_col_armor_r:GetInt(),  cv_col_armor_g:GetInt(),  cv_col_armor_b:GetInt())
+    local col_armored = Color(cv_col_armored_r:GetInt(), cv_col_armored_g:GetInt(), cv_col_armored_b:GetInt())
 
     local activeTargets = CollectTargets(displayMode, maxRange)
     for _, ent in ipairs(activeTargets) do
@@ -293,8 +298,10 @@ hook.Add("HUDPaint", "DrawSakuraHealthBar", function()
                 data.decay_hp = math.Approach(data.decay_hp, currentHP, frameTime * data.max_hp * 2.0)
                 local decayPct = math.Clamp(data.decay_hp / data.max_hp, 0, 1)
 
+                local protection = entValid and SakuraMES.GetAP(data.ent)
                 local baseColor = data.is_friend and col_friend or col_enemy
                 if data.is_neutral then baseColor = col_neutral end
+                if protection and protection.healthKind == "armor" then baseColor = col_armored end
                 local drawColor = baseColor
                 if curTime < data.flash_end_time and entValid then
                     local flashLeft = data.flash_end_time - curTime
@@ -323,26 +330,12 @@ hook.Add("HUDPaint", "DrawSakuraHealthBar", function()
                     surface.DrawRect(rx, ry, BAR_W * hpPct, BAR_H)
                 end
 
-                -- 护甲条紧贴生命条上方，不使用受伤衰减或闪烁动画。
-                if entValid and ARMOR_H > 0 then
-                    local hasArmor  = data.ent:GetNWBool("Sakura_Health_HasArmor", false)
-                    local curArmor  = data.ent:GetNWInt("Sakura_Health_Armor", 0)
-                    local maxArmor  = data.ent:GetNWInt("Sakura_Health_ArmorMax", 0)
-
-                    if hasArmor and maxArmor > 0 then
-                        local armorPct = math.Clamp(curArmor / maxArmor, 0, 1)
-
-                        local ary = ry - ARMOR_H
-
-                        surface.SetDrawColor(alphaBg)
-                        surface.DrawRect(rx, ary, BAR_W, ARMOR_H)
-
-                        if armorPct > 0 then
-                            local alphaArmor = Color(col_armor.r, col_armor.g, col_armor.b, alpha)
-                            surface.SetDrawColor(alphaArmor)
-                            surface.DrawRect(rx, ary, BAR_W * armorPct, ARMOR_H)
-                        end
-                    end
+                if protection and ARMOR_H > 0 then
+                    local ary = ry - ARMOR_H
+                    surface.SetDrawColor(alphaBg)
+                    surface.DrawRect(rx, ary, BAR_W, ARMOR_H)
+                    surface.SetDrawColor(col_armor.r, col_armor.g, col_armor.b, alpha)
+                    surface.DrawRect(rx, ary, BAR_W * protection.fraction, ARMOR_H)
                 end
             end
         end
@@ -390,6 +383,7 @@ local function BuildSakuraHealthMenu(panel)
     AddMixer(GetText("col_enemy"),  "sakura_health_enemy_r",  "sakura_health_enemy_g",  "sakura_health_enemy_b")
     AddMixer(GetText("col_friend"), "sakura_health_friend_r", "sakura_health_friend_g", "sakura_health_friend_b")
     AddMixer(GetText("col_neutral"), "sakura_health_neutral_r", "sakura_health_neutral_g", "sakura_health_neutral_b")
+    AddMixer(GetText("col_armored"), "sakura_health_armored_r", "sakura_health_armored_g", "sakura_health_armored_b")
     AddMixer(GetText("col_bg"),     "sakura_health_bg_r",     "sakura_health_bg_g",     "sakura_health_bg_b",   "sakura_health_bg_a")
     AddMixer(GetText("col_dmg"),    "sakura_health_dmg_r",    "sakura_health_dmg_g",    "sakura_health_dmg_b")
     AddMixer(GetText("col_flash"),  "sakura_health_flash_r",  "sakura_health_flash_g",  "sakura_health_flash_b")
@@ -417,6 +411,10 @@ local function BuildSakuraHealthMenu(panel)
         RunConsoleCommand("sakura_health_neutral_r", "180")
         RunConsoleCommand("sakura_health_neutral_g", "180")
         RunConsoleCommand("sakura_health_neutral_b", "180")
+
+        RunConsoleCommand("sakura_health_armored_r", "255")
+        RunConsoleCommand("sakura_health_armored_g", "195")
+        RunConsoleCommand("sakura_health_armored_b", "48")
 
         RunConsoleCommand("sakura_health_bg_r", "30")
         RunConsoleCommand("sakura_health_bg_g", "30")

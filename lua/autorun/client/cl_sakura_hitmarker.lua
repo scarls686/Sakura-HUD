@@ -29,8 +29,14 @@ local function GetText(key)
     return language.GetPhrase("sakura_hud.hitmarker." .. key)
 end
 
-local function AddMarker(isHeadshot, isKill, isArmor)
+local function AddMarker(isHeadshot, isKill, isArmor, targetID)
     if not cv_enabled:GetBool() then return end
+    if targetID > 10000000 then return end -- GetCreationID 的有效范围。
+    if isKill then
+        for i = #active_markers, 1, -1 do
+            if active_markers[i].targetID == targetID then table.remove(active_markers, i) end
+        end
+    end
 
     local data = {
         time = UnPredictedCurTime(),
@@ -38,6 +44,7 @@ local function AddMarker(isHeadshot, isKill, isArmor)
         isHeadshot = isHeadshot,
         isKill = isKill,
         isArmor = isArmor or false,
+        targetID = targetID,
         baseSize = cv_size:GetInt(),
         initDist = cv_init_dist:GetInt(),
         spreadDist = cv_spread_dist:GetInt(),
@@ -53,8 +60,8 @@ local function AddMarker(isHeadshot, isKill, isArmor)
     table.insert(active_markers, data)
 end
 
-net.Receive("Sakura_Hit", function() AddMarker(net.ReadBool(), false, net.ReadBool()) end)
-net.Receive("Sakura_Kill", function() AddMarker(net.ReadBool(), true, net.ReadBool()) end)
+net.Receive("Sakura_Hit", function() AddMarker(net.ReadBool(), false, net.ReadBool(), net.ReadUInt(24)) end)
+net.Receive("Sakura_Kill", function() AddMarker(net.ReadBool(), true, net.ReadBool(), net.ReadUInt(24)) end)
 
 hook.Add("HUDPaint", "DrawSakuraHitmarker", function()
     if #active_markers == 0 then return end
